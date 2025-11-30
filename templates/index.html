@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="summary">
+    <p>Баланс: <strong>{{ balance }} ₽</strong></p>
+    <p>Доходы: <span class="income">{{ income_sum }} ₽</span> | Расходы: <span class="expense">{{ expense_sum }} ₽</span></p>
+</div>
+
+<form method="POST" action="{{ url_for('add_entry') }}" class="add-form">
+    <select name="type" required>
+        <option value="income">Доход</option>
+        <option value="expense">Расход</option>
+    </select>
+    <input type="text" name="category" placeholder="Категория" required>
+    <input type="number" name="amount" step="0.01" placeholder="Сумма" required>
+    <input type="text" name="comment" placeholder="Комментарий">
+    <button type="submit">Добавить</button>
+</form>
+
+<h2>Записи</h2>
+<table class="entry-table">
+    <thead>
+        <tr>
+            <th>Дата</th><th>Тип</th><th>Категория</th><th>Сумма</th><th>Комментарий</th><th>-</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in entries %}
+        <tr>
+            <td>{{ entry.date.strftime("%Y-%m-%d") }}</td>
+            <td>{{ 'Доход' if entry.type == 'income' else 'Расход' }}</td>
+            <td>{{ entry.category }}</td>
+            <td>{{ entry.amount }} ₽</td>
+            <td>{{ entry.comment }}</td>
+            <td>
+                <form method="POST" action="{{ url_for('delete_entry', entry_id=entry.id) }}" style="display:inline;">
+                    <button class="del-btn" type="submit">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>Расходы по категориям</h3>
+<ul>
+    {% for category, cat_sum in expenses_by_category %}
+    <li>{{ category }}: {{ cat_sum }} ₽</li>
+    {% endfor %}
+</ul>
+
+<h3>Диаграммы</h3>
+<div style="display:flex; gap:30px; flex-wrap:wrap;">
+    <div>
+        <canvas id="expensesChart" width="300" height="220"></canvas>
+    </div>
+    <div>
+        <canvas id="incomesChart" width="300" height="220"></canvas>
+    </div>
+</div>
+
+<a href="{{ url_for('export_json') }}" target="_blank">Экспортировать записи (JSON)</a>
+
+<!-- Подключение Chart.js и скрипт с данными -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Данные расходов
+    const expenseCategories = {{ expenses_by_category|map(attribute=0)|list|tojson }};
+    const expenseValues = {{ expenses_by_category|map(attribute=1)|list|tojson }};
+    // Данные доходов
+    const incomeCategories = {{ incomes_by_category|map(attribute=0)|list|tojson }};
+    const incomeValues = {{ incomes_by_category|map(attribute=1)|list|tojson }};
+
+    const colors = ['#FF6384','#36A2EB','#FFCE56','#b39ddb','#4db6ac','#ffd54f','#ff8a65','#81c784','#7986cb','#ba68c8'];
+
+    // Диаграмма расходов
+    const expensesCtx = document.getElementById('expensesChart').getContext('2d');
+    if (expenseValues.length > 0) {
+        new Chart(expensesCtx, {
+            type: 'pie',
+            data: {
+                labels: expenseCategories,
+                datasets: [{
+                    data: expenseValues,
+                    backgroundColor: colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: false,
+                plugins: {
+                    legend: { position: 'right' },
+                    title: { display: true, text: 'Структура расходов по категориям' }
+                }
+            }
+        });
+    } else {
+        document.getElementById('expensesChart').style.display = 'none';
+    }
+
+    // Диаграмма доходов
+    const incomesCtx = document.getElementById('incomesChart').getContext('2d');
+    if (incomeValues.length > 0) {
+        new Chart(incomesCtx, {
+            type: 'pie',
+            data: {
+                labels: incomeCategories,
+                datasets: [{
+                    data: incomeValues,
+                    backgroundColor: colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: false,
+                plugins: {
+                    legend: { position: 'right' },
+                    title: { display: true, text: 'Структура доходов по категориям' }
+                }
+            }
+        });
+    } else {
+        document.getElementById('incomesChart').style.display = 'none';
+    }
+</script>
+{% endblock %}

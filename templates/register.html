@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Регистрация</h2>
+<form method="POST" class="add-form">
+    <input type="text" name="username" placeholder="Логин" required>
+    <input type="password" name="password" placeholder="Пароль" required>
+    <button type="submit">Зарегистрироваться</button>
+</form>
+<div>
+    <a href="{{ url_for('login') }}">Уже есть аккаунт? Войти</a>
+</div>
+{% if get_flashed_messages() %}
+  <ul class="flash-msgs">{% for msg in get_flashed_messages() %}
+    <li>{{ msg }}</li>
+  {% endfor %}</ul>
+{% endif %}
+{% endblock %}
